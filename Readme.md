@@ -1,4 +1,4 @@
-# Data Deduplication System 🗃️
+# Data Deduplication System For Cloud Storage ☁️🗃️
 
 A web-based file storage system that implements data deduplication to efficiently manage storage space by detecting and handling duplicate files.
 
