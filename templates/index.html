@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Deduplication System</title>
+    <style>
+
+        .modal-content {
+            max-width: 600px;  /* Increased width for better button layout */
+        }
+
+        .delete-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .delete-options button {
+            width: 100%;
+            padding: 12px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-options button span.count {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+        }
+
+        .delete-warning {
+            color: #d32f2f;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        #uploadForm {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        #uploadForm input[type="file"] {
+            margin-right: 10px;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+        }
+
+        .delete-btn:hover {
+            background-color: #da190b;
+        }
+
+        .list-btn {
+            background-color: #2196F3;
+        }
+
+        .list-btn:hover {
+            background-color: #0b7dda;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 5px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .duplicate-count {
+            color: #e65100;
+            font-weight: bold;
+        }
+
+        .original-label {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+
+        .duplicate-label {
+            color: #c62828;
+            font-weight: bold;
+        }
+
+        #duplicatesList {
+            list-style: none;
+            padding: 0;
+        }
+
+        #duplicatesList li {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Data Deduplication System</h1>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" id="fileInput" required>
+        <button type="submit">Upload File</button>
+    </form>
+
+    <h2>Uploaded Files</h2>
+    <table id="fileTable">
+        <thead>
+            <tr>
+                <th>File Name</th>
+                <th>File Size</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="fileTableBody">
+            <!-- Files will be listed here dynamically -->
+        </tbody>
+    </table>
+
+    <!-- Modal for delete confirmation -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Delete Options</h2>
+            <p>Please select a delete option:</p>
+            <div class="delete-options">
+                <button onclick="confirmDelete('original')" class="delete-btn">
+                    Delete Original File Only
+                    <span class="count">1 file</span>
+                </button>
+                <button onclick="confirmDelete('duplicates_only')" class="delete-btn">
+                    Delete All Duplicates Only
+                    <span class="count" id="duplicatesCount"></span>
+                </button>
+                <button onclick="confirmDelete('all')" class="delete-btn">
+                    Delete Original & All Duplicates
+                    <span class="count" id="totalCount"></span>
+                </button>
+            </div>
+            <p class="delete-warning" id="deleteWarning"></p>
+        </div>
+    </div>
+
+    <!-- Modal for duplicates list -->
+    <div id="duplicatesModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Duplicate Files</h2>
+            <ul id="duplicatesList">
+                <!-- Duplicates will be listed here -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let selectedFileId = null;
+
+        document.getElementById('uploadForm').onsubmit = async function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            alert(result.message);
+            loadFiles();
+        };
+
+        async function loadFiles() {
+            const response = await fetch('/files');
+            const data = await response.json();
+
+            const tableBody = document.getElementById('fileTableBody');
+            tableBody.innerHTML = '';
+
+            data.files.forEach(file => {
+                const row = document.createElement('tr');
+                
+                let statusText = '';
+                if (file.is_duplicate) {
+                    statusText = `<span class="duplicate-label">Duplicate</span> (${file.duplicate_count} total duplicates of original)`;
+                } else {
+                    statusText = `<span class="original-label">Original</span>`;
+                    if (file.duplicate_count > 0) {
+                        statusText += ` <span class="duplicate-count">(${file.duplicate_count} duplicates found)</span>`;
+                    } else {
+                        statusText += ' (No duplicates)';
+                    }
+                }
+
+                let actionButtons = '';
+                if (file.is_duplicate) {
+                    actionButtons = `<button class="delete-btn" onclick="deleteFile(${file.id})">Delete</button>`;
+                } else {
+                    actionButtons = `
+                        <button class="delete-btn" onclick="showDeleteModal(${file.id})">Delete</button>
+                        ${file.duplicate_count > 0 ? `<button class="list-btn" onclick="showDuplicates(${file.id})">List Duplicates</button>` : ''}
+                    `;
+                }
+
+                row.innerHTML = `
+                    <td>${file.file_name}</td>
+                    <td>${file.is_duplicate ? '0 KB' : formatFileSize(file.file_size)}</td>
+                    <td>${statusText}</td>
+                    <td>${actionButtons}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Modal handling
+        const deleteModal = document.getElementById('deleteModal');
+        const duplicatesModal = document.getElementById('duplicatesModal');
+        const closeButtons = document.getElementsByClassName('close');
+
+        // Close modals when clicking the X
+        Array.from(closeButtons).forEach(button => {
+            button.onclick = function() {
+                deleteModal.style.display = "none";
+                duplicatesModal.style.display = "none";
+            }
+        });
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target === deleteModal) {
+                deleteModal.style.display = "none";
+            }
+            if (event.target === duplicatesModal) {
+                duplicatesModal.style.display = "none";
+            }
+        }
+
+        async function showDeleteModal(fileId) {
+            selectedFileId = fileId;
+            
+            // Fetch duplicate count for this file
+            const response = await fetch(`/duplicates/${fileId}`);
+            const data = await response.json();
+            
+            const duplicatesCount = data.duplicates.length;
+            const totalCount = duplicatesCount + 1;  // Including original file
+            
+            // Update the count spans
+            document.getElementById('duplicatesCount').textContent = `${duplicatesCount} files`;
+            document.getElementById('totalCount').textContent = `${totalCount} files`;
+            
+            // Show relevant warning message
+            const warningEl = document.getElementById('deleteWarning');
+            if (duplicatesCount > 0) {
+                warningEl.textContent = `This file has ${duplicatesCount} duplicate(s). Please choose carefully.`;
+            } else {
+                warningEl.textContent = 'No duplicates found for this file.';
+                // Disable the duplicates-only button if there are no duplicates
+                document.querySelector('button[onclick="confirmDelete(\'duplicates_only\')"]').disabled = true;
+            }
+            
+            deleteModal.style.display = "block";
+        }
+
+        async function showDuplicates(fileId) {
+            const response = await fetch(`/duplicates/${fileId}`);
+            const data = await response.json();
+            
+            const duplicatesList = document.getElementById('duplicatesList');
+            duplicatesList.innerHTML = '';
+            
+            if (data.status === 'success') {
+                data.duplicates.forEach(duplicate => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        ${duplicate.display_name}
+                        <button class="delete-btn" onclick="deleteDuplicate(${duplicate.id})">Delete</button>
+                    `;
+                    duplicatesList.appendChild(li);
+                });
+            }
+            
+            duplicatesModal.style.display = "block";
+        }
+
+        async function confirmDelete(deleteType) {
+            if (!selectedFileId) return;
+            
+            let confirmMessage;
+            switch (deleteType) {
+                case 'original':
+                    confirmMessage = 'Are you sure you want to delete only the original file?';
+                    break;
+                case 'duplicates_only':
+                    confirmMessage = 'Are you sure you want to delete all duplicate files?';
+                    break;
+                case 'all':
+                    confirmMessage = 'Are you sure you want to delete the original file and all its duplicates?';
+                    break;
+            }
+            
+            if (confirm(confirmMessage)) {
+                await deleteFile(selectedFileId, deleteType);
+                deleteModal.style.display = "none";
+                selectedFileId = null;
+            }
+        }
+
+        async function deleteFile(fileId, deleteType = 'original') {
+            try {
+                const response = await fetch(`/delete/${fileId}?delete_type=${deleteType}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                alert(result.message);
+                loadFiles();
+                // Close duplicates modal if open
+                duplicatesModal.style.display = "none";
+            } catch (error) {
+                alert('Error deleting file: ' + error.message);
+            }
+        }
+
+        async function deleteDuplicate(duplicateId) {
+            await deleteFile(duplicateId);
+            // Refresh the duplicates list if the modal is still open
+            if (duplicatesModal.style.display === "block") {
+                showDuplicates(selectedFileId);
+            }
+        }
+
+        // Load files when the page loads
+        window.onload = loadFiles;
+    </script>
+</body>
+</html>
